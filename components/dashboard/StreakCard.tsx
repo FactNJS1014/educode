@@ -5,19 +5,19 @@ import { Flame, Calendar, Award, Zap } from 'lucide-react';
 import { ProgressBar } from '../ui/ProgressBar';
 
 interface StreakCardProps {
-  streakDays: number;
-  dailyGoalProgressMinutes: number;
-  dailyGoalTargetMinutes: number;
+  streakDays?: number;
+  dailyGoalProgressMinutes?: number;
+  dailyGoalTargetMinutes?: number;
 }
 
 export function StreakCard({
-  streakDays,
-  dailyGoalProgressMinutes,
-  dailyGoalTargetMinutes,
+  streakDays = 1,
+  dailyGoalProgressMinutes = 0,
+  dailyGoalTargetMinutes = 30,
 }: StreakCardProps) {
   const goalPercentage = Math.min(
     100,
-    Math.round((dailyGoalProgressMinutes / (dailyGoalTargetMinutes || 30)) * 100)
+    Math.round(((dailyGoalProgressMinutes || 0) / (dailyGoalTargetMinutes || 30)) * 100)
   );
 
   return (

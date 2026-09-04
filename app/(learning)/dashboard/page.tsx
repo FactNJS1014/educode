@@ -28,13 +28,23 @@ export default async function DashboardPage() {
     redirect('/login?redirect=/dashboard');
   }
 
-  const userStats = await StatisticsService.getUserStats(sessionUser.id);
-  const recentActivities = await db.getActivities(6);
-  const enrolledCourses = await CourseService.getUserEnrolledCourses(sessionUser.id);
-  const allCourses = await CourseService.getCourses(undefined, sessionUser.id);
+  const userStats = (await StatisticsService.getUserStats(sessionUser.id)) || {
+    totalCoursesStarted: 0,
+    totalCoursesCompleted: 0,
+    totalLessonsCompleted: 0,
+    totalQuizzesPassed: 0,
+    totalProjectsCompleted: 0,
+    learningStreakDays: 1,
+    estimatedHoursLearned: 0,
+    dailyGoalProgressMinutes: 0,
+    dailyGoalTargetMinutes: 30,
+  };
+  const recentActivities = (await db.getActivities(6)) || [];
+  const enrolledCourses = (await CourseService.getUserEnrolledCourses(sessionUser.id)) || [];
+  const allCourses = (await CourseService.getCourses(undefined, sessionUser.id)) || [];
 
   // Active course in progress
-  const activeCourse = enrolledCourses.find(c => (c.progressPercentage || 0) < 100) || enrolledCourses[0];
+  const activeCourse = enrolledCourses.find(c => (c.progressPercentage || 0) < 100) || enrolledCourses[0] || null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10">
@@ -46,11 +56,11 @@ export default async function DashboardPage() {
               Student Command Center
             </span>
             <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
-              {sessionUser.role}
+              {sessionUser.role || 'USER'}
             </span>
           </div>
           <h1 className="text-2xl sm:text-4xl font-black text-slate-100 mt-1">
-            Welcome back, {sessionUser.name} 👋
+            Welcome back, {sessionUser.name || sessionUser.username || 'Student'} 👋
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
             Track your streak, code exercises, and engineering certifications.
@@ -83,9 +93,9 @@ export default async function DashboardPage() {
         </div>
         <div>
           <StreakCard
-            streakDays={userStats.learningStreakDays}
-            dailyGoalProgressMinutes={userStats.dailyGoalProgressMinutes}
-            dailyGoalTargetMinutes={userStats.dailyGoalTargetMinutes}
+            streakDays={userStats?.learningStreakDays || 1}
+            dailyGoalProgressMinutes={userStats?.dailyGoalProgressMinutes || 0}
+            dailyGoalTargetMinutes={userStats?.dailyGoalTargetMinutes || 30}
           />
         </div>
       </div>
@@ -159,9 +169,9 @@ export default async function DashboardPage() {
                 <div key={act.id} className="py-3 flex items-start gap-3 text-xs">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-slate-200 font-medium truncate">{act.activityType}</p>
-                    <span className="text-[10px] text-slate-500 font-mono">
-                      {new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <p className="text-slate-200 font-medium truncate">{act.activityType || 'Learning Progress'}</p>
+                    <span suppressHydrationWarning className="text-[10px] text-slate-500 font-mono">
+                      {act.createdAt ? new Date(act.createdAt).toLocaleDateString() : 'Recent'}
                     </span>
                   </div>
                 </div>

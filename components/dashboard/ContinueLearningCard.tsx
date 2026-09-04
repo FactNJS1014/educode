@@ -5,10 +5,12 @@ import { ProgressBar } from '../ui/ProgressBar';
 import type { Course } from '@/lib/types';
 
 interface ContinueLearningCardProps {
-  course: Course;
+  course?: Course | null;
 }
 
 export function ContinueLearningCard({ course }: ContinueLearningCardProps) {
+  if (!course) return null;
+
   return (
     <div className="rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/30 p-6 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
       <div className="space-y-2 max-w-xl">
@@ -17,12 +19,12 @@ export function ContinueLearningCard({ course }: ContinueLearningCardProps) {
             CONTINUE LEARNING
           </span>
           <span className="text-xs text-slate-400 font-mono">
-            {course.technology}
+            {course.technology || 'Core Track'}
           </span>
         </div>
 
         <h3 className="text-xl font-bold text-slate-100">{course.title}</h3>
-        <p className="text-xs text-slate-400 line-clamp-1">{course.description}</p>
+        <p className="text-xs text-slate-400 line-clamp-1">{course.description || ''}</p>
 
         <div className="pt-2 w-full max-w-md">
           <ProgressBar progress={course.progressPercentage || 0} showLabel size="sm" color="emerald" />
@@ -30,7 +32,7 @@ export function ContinueLearningCard({ course }: ContinueLearningCardProps) {
       </div>
 
       <NextLink
-        href={`/courses/${course.slug}`}
+        href={`/courses/${course.slug || ''}`}
         className="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition-all shrink-0 cursor-pointer"
       >
         <PlayCircle className="w-4 h-4 fill-slate-950" />

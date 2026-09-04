@@ -2,29 +2,29 @@ import React from 'react';
 import { BookOpen, CheckCircle, Award, Layers, Clock, Flame } from 'lucide-react';
 import type { UserStats } from '@/lib/types';
 
-export function StatCards({ stats }: { stats: UserStats }) {
+export function StatCards({ stats }: { stats?: UserStats | null }) {
   const items = [
     {
       label: 'Lessons Completed',
-      value: stats.totalLessonsCompleted,
+      value: stats?.totalLessonsCompleted ?? 0,
       icon: CheckCircle,
       color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
     },
     {
       label: 'Courses in Progress',
-      value: stats.totalCoursesStarted,
+      value: stats?.totalCoursesStarted ?? 0,
       icon: BookOpen,
       color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
     },
     {
       label: 'Quizzes Passed',
-      value: stats.totalQuizzesPassed,
+      value: stats?.totalQuizzesPassed ?? 0,
       icon: Award,
       color: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
     },
     {
       label: 'Projects Built',
-      value: stats.totalProjectsCompleted,
+      value: stats?.totalProjectsCompleted ?? 0,
       icon: Layers,
       color: 'text-sky-400 bg-sky-500/10 border-sky-500/20',
     },

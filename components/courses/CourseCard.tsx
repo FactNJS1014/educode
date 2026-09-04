@@ -32,13 +32,15 @@ const TECH_BADGE_COLORS: Record<string, string> = {
 };
 
 export function CourseCard({ course, isLoggedIn = false }: CourseCardProps) {
-  const [favorite, setFavorite] = useState(course.isFavorite || false);
+  const [favorite, setFavorite] = useState(course?.isFavorite || false);
   const [loadingFav, setLoadingFav] = useState(false);
+
+  if (!course) return null;
 
   const handleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!isLoggedIn) return;
+    if (!isLoggedIn || !course?.id) return;
 
     setLoadingFav(true);
     const res = await toggleFavoriteAction(course.id);
@@ -48,7 +50,7 @@ export function CourseCard({ course, isLoggedIn = false }: CourseCardProps) {
     setLoadingFav(false);
   };
 
-  const techBadge = TECH_BADGE_COLORS[course.technology] || 'bg-slate-800 text-slate-300 border-slate-700';
+  const techBadge = (course.technology && TECH_BADGE_COLORS[course.technology]) || 'bg-slate-800 text-slate-300 border-slate-700';
 
   return (
     <div className="group relative flex flex-col justify-between rounded-2xl bg-slate-900/90 border border-slate-800/90 hover:border-slate-700 p-6 shadow-xl hover:shadow-2xl hover:shadow-emerald-950/20 transition-all duration-300">
