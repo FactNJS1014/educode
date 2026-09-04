@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { executeJavaScript, executeInterpretedLanguage } from '@/lib/code-runner/executor';
+import { executePython } from '@/lib/code-runner/python-engine';
 
 const execFileAsync = promisify(execFile);
 
@@ -20,8 +21,8 @@ export async function POST(req: NextRequest) {
     if (lang === 'python' || lang === 'py') {
       const startTime = performance.now();
       try {
-        // Execute real Python via python3 CLI with 3.5-second timeout
-        const { stdout, stderr } = await execFileAsync('/usr/bin/python3', ['-c', code], {
+        // Attempt system python3 if available
+        const { stdout, stderr } = await execFileAsync('python3', ['-c', code], {
           timeout: 3500,
           maxBuffer: 1024 * 1024,
         });
@@ -35,7 +36,12 @@ export async function POST(req: NextRequest) {
           exitCode: 0,
         });
       } catch (execErr: any) {
-        // If execution timed out or threw an error in python3
+        // If python binary does not exist (e.g. Netlify/Vercel serverless environment), fall back to universal Python engine
+        if (execErr.code === 'ENOENT' || execErr.message?.includes('ENOENT')) {
+          const pyResult = executePython(code);
+          return NextResponse.json(pyResult);
+        }
+
         if (execErr.killed) {
           return NextResponse.json({
             output: 'Error: Execution timed out (exceeded 3.5s limit). Possible infinite loop.',

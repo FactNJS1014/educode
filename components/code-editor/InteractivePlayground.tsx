@@ -15,6 +15,7 @@ import {
   Info
 } from 'lucide-react';
 import { executeJavaScript, executeInterpretedLanguage } from '@/lib/code-runner/executor';
+import { executePython } from '@/lib/code-runner/python-engine';
 
 interface CodePreset {
   name: string;
@@ -494,7 +495,9 @@ export function InteractivePlayground() {
     // 2. Client-side execution fallback
     try {
       let localResult;
-      if (currentLang === 'typescript' || currentLang === 'ts') {
+      if (currentLang === 'python' || currentLang === 'py') {
+        localResult = executePython(currentCode);
+      } else if (currentLang === 'typescript' || currentLang === 'ts' || currentLang === 'javascript' || currentLang === 'js') {
         localResult = executeJavaScript(currentCode);
       } else {
         localResult = executeInterpretedLanguage(currentLang, currentCode);
