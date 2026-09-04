@@ -1,7 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Play, RotateCcw, CheckCircle, Terminal, Code2, Sparkles, Copy, Check } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import {
+  Play,
+  RotateCcw,
+  CheckCircle,
+  Terminal,
+  Sparkles,
+  Copy,
+  Check,
+  Trash2,
+  FileCode,
+  AlertCircle,
+  Info
+} from 'lucide-react';
+import { executeJavaScript, executeInterpretedLanguage } from '@/lib/code-runner/executor';
+
+interface CodePreset {
+  name: string;
+  code: string;
+}
 
 interface LanguageConfig {
   id: string;
@@ -11,7 +29,7 @@ interface LanguageConfig {
   challengeTitle: string;
   challengeDescription: string;
   expectedOutput: string;
-  simulatedRunner: (code: string) => { output: string; passed: boolean };
+  presets: CodePreset[];
 }
 
 const LANGUAGES: LanguageConfig[] = [
@@ -35,18 +53,47 @@ if __name__ == "__main__":
     result = generate_fibonacci(8)
     print(result)
 `,
-    simulatedRunner: (code: string) => {
-      if (code.includes('generate_fibonacci') || code.includes('fib')) {
-        return {
-          output: `[0, 1, 1, 2, 3, 5, 8, 13]\n\nExecution finished in 0.012s with exit code 0.`,
-          passed: true,
-        };
-      }
-      return {
-        output: `Output:\nScript executed successfully.\n[0, 1, 1, 2, 3, 5, 8, 13]`,
-        passed: true,
-      };
-    },
+    presets: [
+      {
+        name: 'Fibonacci (Challenge)',
+        code: `def generate_fibonacci(n: int) -> list[int]:
+    if n <= 0:
+        return []
+    fib = [0, 1]
+    while len(fib) < n:
+        fib.append(fib[-1] + fib[-2])
+    return fib[:n]
+
+print(generate_fibonacci(8))
+`,
+      },
+      {
+        name: 'Hello World & Math',
+        code: `print("👋 Welcome to EduCode Python Sandbox!")
+
+languages = ["Python", "TypeScript", "Go", "Rust"]
+for i, lang in enumerate(languages, start=1):
+    print(f"{i}. Learning {lang}")
+
+total = sum([x * 2 for x in range(1, 6)])
+print(f"Computed total: {total}")
+`,
+      },
+      {
+        name: 'Prime Number Checker',
+        code: `def is_prime(num: int) -> bool:
+    if num < 2:
+        return False
+    for i in range(2, int(num ** 0.5) + 1):
+        if num % i == 0:
+            return False
+    return True
+
+primes = [n for n in range(2, 30) if is_prime(n)]
+print("Primes under 30:", primes)
+`,
+      },
+    ],
   },
   {
     id: 'typescript',
@@ -73,12 +120,54 @@ const activeTitles = courses
 
 console.log(activeTitles);
 `,
-    simulatedRunner: (code: string) => {
-      return {
-        output: `[ { id: 'TS01', title: 'TYPESCRIPT GENERICS' }, { id: 'TS02', title: 'REACT 19 ARCHITECTURE' } ]\n\nTypeScript compilation clean. 0 errors.`,
-        passed: true,
-      };
-    },
+    presets: [
+      {
+        name: 'Generics Filter (Challenge)',
+        code: `interface Course {
+  id: string;
+  title: string;
+  active: boolean;
+}
+
+const courses: Course[] = [
+  { id: 'TS01', title: 'TypeScript Generics', active: true },
+  { id: 'TS02', title: 'React 19 Architecture', active: true },
+  { id: 'TS03', title: 'Deprecated Legacy Stack', active: false },
+];
+
+const activeTitles = courses
+  .filter(c => c.active)
+  .map(c => ({ id: c.id, title: c.title.toUpperCase() }));
+
+console.log(activeTitles);
+`,
+      },
+      {
+        name: 'Array Transformations',
+        code: `const scores = [85, 92, 78, 96, 60, 88];
+
+const average = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+const honors = scores.filter(s => s >= 85).sort((a, b) => b - a);
+
+console.log('Class Average:', average.toFixed(1));
+console.log('Honors Students:', honors);
+`,
+      },
+      {
+        name: 'Async Promise Pipeline',
+        code: `const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+async function fetchStats() {
+  console.log('Fetching live learner telemetry...');
+  const users = [{ name: 'Somchai', level: 5 }, { name: 'Alice', level: 8 }];
+  console.log('Loaded ' + users.length + ' active learners.');
+  return users;
+}
+
+fetchStats().then(data => console.log('Final payload:', data));
+`,
+      },
+    ],
   },
   {
     id: 'golang',
@@ -111,12 +200,47 @@ func main() {
 	fmt.Println("All 3 tasks processed concurrently.")
 }
 `,
-    simulatedRunner: (code: string) => {
-      return {
-        output: `Task 1 completed\nTask 2 completed\nTask 3 completed\nAll 3 tasks processed concurrently.\n\nGo runtime elapsed: 14.2ms.`,
-        passed: true,
-      };
-    },
+    presets: [
+      {
+        name: 'Goroutines (Challenge)',
+        code: `package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+func main() {
+	for i := 1; i <= 3; i++ {
+		fmt.Printf("Task %d completed\\n", i)
+	}
+	fmt.Println("All 3 tasks processed concurrently.")
+}
+`,
+      },
+      {
+        name: 'Structs & Slices',
+        code: `package main
+
+import "fmt"
+
+type Learner struct {
+	Name   string
+	Points int
+}
+
+func main() {
+	students := []Learner{
+		{"Nattawut", 950},
+		{"Siriporn", 1200},
+	}
+	for _, s := range students {
+		fmt.Printf("Student: %s, Score: %d\\n", s.Name, s.Points)
+	}
+}
+`,
+      },
+    ],
   },
   {
     id: 'rust',
@@ -137,12 +261,32 @@ fn main() {
     }
 }
 `,
-    simulatedRunner: (code: string) => {
-      return {
-        output: `Successfully parsed: 2026\n\nRustc 1.78.0 compiled in release mode (optimizations enabled).`,
-        passed: true,
-      };
-    },
+    presets: [
+      {
+        name: 'Result Matching (Challenge)',
+        code: `fn parse_year(input: &str) -> Result<u32, std::num::ParseIntError> {
+    input.trim().parse::<u32>()
+}
+
+fn main() {
+    let raw_year = "2026";
+    match parse_year(raw_year) {
+        Ok(year) => println!("Successfully parsed: {}", year),
+        Err(e) => eprintln!("Parse error: {}", e),
+    }
+}
+`,
+      },
+      {
+        name: 'Vector Operations',
+        code: `fn main() {
+    let numbers = vec![1, 2, 3, 4, 5];
+    let squares: Vec<i32> = numbers.iter().map(|&x| x * x).collect();
+    println!("Squared values: {:?}", squares);
+}
+`,
+      },
+    ],
   },
   {
     id: 'java',
@@ -173,12 +317,33 @@ public class Main {
     }
 }
 `,
-    simulatedRunner: (code: string) => {
-      return {
-        output: `Average Passing GPA: 3.85\n\nJVM executed successfully (OpenJDK 21).`,
-        passed: true,
-      };
-    },
+    presets: [
+      {
+        name: 'Streams & Records (Challenge)',
+        code: `import java.util.List;
+
+public class Main {
+    public record Student(String name, double gpa, boolean passed) {}
+
+    public static void main(String[] args) {
+        List<Student> students = List.of(
+            new Student("Somchai", 3.9, true),
+            new Student("Alice", 3.8, true),
+            new Student("Bob", 1.9, false)
+        );
+
+        double avgGpa = students.stream()
+            .filter(Student::passed)
+            .mapToDouble(Student::gpa)
+            .average()
+            .orElse(0.0);
+
+        System.out.printf("Average Passing GPA: %.2f%n", avgGpa);
+    }
+}
+`,
+      },
+    ],
   },
   {
     id: 'php',
@@ -203,12 +368,23 @@ function getStatusDescription(int $code): string {
 
 echo "Status 201 is: " . getStatusDescription(201) . "\\n";
 `,
-    simulatedRunner: (code: string) => {
-      return {
-        output: `Status 201 is: Resource Created Successfully\n\nPHP 8.3 CLI execution completed.`,
-        passed: true,
-      };
-    },
+    presets: [
+      {
+        name: 'Match Expression (Challenge)',
+        code: `<?php
+function getStatusDescription(int $code): string {
+    return match ($code) {
+        200 => 'OK',
+        201 => 'Resource Created Successfully',
+        400 => 'Bad Request',
+        default => 'Unknown',
+    };
+}
+
+echo "Status 201 is: " . getStatusDescription(201) . "\\n";
+`,
+      },
+    ],
   },
   {
     id: 'csharp',
@@ -229,52 +405,163 @@ class Program {
     }
 }
 `,
-    simulatedRunner: (code: string) => {
-      return {
-        output: `Top Scores: 98, 92, 85\n\n.NET 8.0 runtime execution finished.`,
-        passed: true,
-      };
-    },
+    presets: [
+      {
+        name: 'LINQ Query (Challenge)',
+        code: `using System;
+using System.Linq;
+
+class Program {
+    static void Main() {
+        int[] scores = { 45, 92, 85, 30, 98, 60 };
+        var topScores = scores.Where(s => s >= 80).OrderByDescending(s => s);
+        Console.WriteLine("Top Scores: " + string.Join(", ", topScores));
+    }
+}
+`,
+      },
+    ],
   },
 ];
 
 export function InteractivePlayground() {
   const [selectedLang, setSelectedLang] = useState<LanguageConfig>(LANGUAGES[0]);
   const [code, setCode] = useState<string>(LANGUAGES[0].boilerplate);
-  const [output, setOutput] = useState<string>('Press "Run Code" to compile and execute in the isolated sandbox.');
+  const [output, setOutput] = useState<string>('Ready. Click "Run Code" to compile and execute your latest code.');
   const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [executionStats, setExecutionStats] = useState<{ timeMs?: number; exitCode?: number } | null>(null);
   const [hasPassed, setHasPassed] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleLanguageChange = (lang: LanguageConfig) => {
     setSelectedLang(lang);
     setCode(lang.boilerplate);
-    setOutput('Press "Run Code" to compile and execute in the isolated sandbox.');
+    setOutput('Ready. Click "Run Code" to compile and execute your latest code.');
     setHasPassed(false);
+    setExecutionStats(null);
   };
 
-  const handleRun = () => {
-    setIsRunning(true);
-    setOutput('⚡ Compiling script & running test suite in isolated runtime...');
+  const handlePresetSelect = (presetCode: string) => {
+    setCode(presetCode);
+    setOutput('Loaded snippet. Click "Run Code" to execute.');
+    setHasPassed(false);
+    setExecutionStats(null);
+  };
 
-    setTimeout(() => {
-      const res = selectedLang.simulatedRunner(code);
-      setOutput(res.output);
-      setHasPassed(res.passed);
+  /**
+   * Runs the exact code currently present in the editor dynamically
+   */
+  const handleRun = async () => {
+    setIsRunning(true);
+    setOutput('⚡ Compiling & executing your new code...');
+    setExecutionStats(null);
+    setHasPassed(false);
+
+    const currentCode = code;
+    const currentLang = selectedLang.id;
+
+    try {
+      // 1. Attempt server-side execution API
+      const res = await fetch('/api/playground/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: currentLang,
+          code: currentCode,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const resultOutput = data.output || 'Code executed with no output.';
+        setOutput(resultOutput);
+        setExecutionStats({
+          timeMs: data.executionTimeMs,
+          exitCode: data.exitCode ?? 0,
+        });
+
+        // Determine if target output is achieved
+        checkPassCondition(resultOutput, selectedLang.expectedOutput);
+        setIsRunning(false);
+        return;
+      }
+    } catch (apiErr) {
+      console.warn('API execution notice, executing in client sandbox fallback:', apiErr);
+    }
+
+    // 2. Client-side execution fallback
+    try {
+      let localResult;
+      if (currentLang === 'typescript' || currentLang === 'ts') {
+        localResult = executeJavaScript(currentCode);
+      } else {
+        localResult = executeInterpretedLanguage(currentLang, currentCode);
+      }
+
+      setOutput(localResult.output);
+      setExecutionStats({
+        timeMs: localResult.executionTimeMs,
+        exitCode: localResult.exitCode,
+      });
+      checkPassCondition(localResult.output, selectedLang.expectedOutput);
+    } catch (fallbackErr: any) {
+      setOutput(`Execution Error: ${fallbackErr?.message || String(fallbackErr)}`);
+      setExecutionStats({ exitCode: 1 });
+    } finally {
       setIsRunning(false);
-    }, 450);
+    }
+  };
+
+  const checkPassCondition = (actualOutput: string, targetExpected: string) => {
+    const cleanActual = actualOutput.replace(/\s+/g, ' ').trim();
+    const cleanExpected = targetExpected.replace(/\s+/g, ' ').trim();
+    if (cleanActual.includes(cleanExpected)) {
+      setHasPassed(true);
+    } else {
+      setHasPassed(false);
+    }
   };
 
   const handleReset = () => {
     setCode(selectedLang.boilerplate);
     setOutput('Reset to default challenge template.');
     setHasPassed(false);
+    setExecutionStats(null);
+  };
+
+  const handleClearOutput = () => {
+    setOutput('Console cleared.');
+    setExecutionStats(null);
   };
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  /**
+   * Handle Tab key indentation inside the textarea
+   */
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const val = textarea.value;
+
+      const updated = val.substring(0, start) + '  ' + val.substring(end);
+      setCode(updated);
+
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + 2;
+      }, 0);
+    }
   };
 
   const lines = code.split('\n');
@@ -301,7 +588,7 @@ export function InteractivePlayground() {
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2.5 self-end lg:self-auto">
+        <div className="flex items-center gap-2.5 self-end lg:self-auto flex-wrap">
           <button
             id="playground-copy-btn"
             onClick={handleCopy}
@@ -332,17 +619,32 @@ export function InteractivePlayground() {
         </div>
       </div>
 
-      {/* Challenge Description */}
-      <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-        <div>
+      {/* Challenge Description & Presets Bar */}
+      <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs">
+        <div className="space-y-1">
           <div className="flex items-center gap-2 font-semibold text-slate-200">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>Practice Task: {selectedLang.challengeTitle}</span>
           </div>
-          <p className="text-slate-400 mt-1">{selectedLang.challengeDescription}</p>
+          <p className="text-slate-400">{selectedLang.challengeDescription}</p>
         </div>
-        <div className="p-2 rounded-lg bg-slate-950 font-mono text-[11px] text-slate-400 border border-slate-800 shrink-0">
-          Target: <span className="text-emerald-400">{selectedLang.expectedOutput.slice(0, 35)}...</span>
+
+        {/* Code Presets Selector */}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <span className="text-slate-400 flex items-center gap-1">
+            <FileCode className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Examples:</span>
+          </span>
+          {selectedLang.presets.map((preset, idx) => (
+            <button
+              key={idx}
+              id={`preset-btn-${selectedLang.id}-${idx}`}
+              onClick={() => handlePresetSelect(preset.code)}
+              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono transition-colors cursor-pointer"
+            >
+              {preset.name}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -357,17 +659,31 @@ export function InteractivePlayground() {
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
               <span className="ml-2 font-medium text-slate-200">main.{selectedLang.extension}</span>
             </div>
-            <span>{lines.length} lines</span>
+            <div className="flex items-center gap-3 text-slate-400">
+              <span className="text-[11px] text-slate-400">Press Tab to indent</span>
+              <span>{lines.length} lines</span>
+            </div>
           </div>
 
-          <div className="flex-1 p-4 font-mono text-sm overflow-auto max-h-[500px]">
+          <div className="flex-1 flex p-4 font-mono text-sm overflow-auto max-h-[520px]">
+            {/* Line numbers gutter */}
+            <div className="select-none pr-3 text-right text-slate-600 font-mono text-xs leading-relaxed border-r border-slate-800/80 mr-3">
+              {lines.map((_, i) => (
+                <div key={i}>{i + 1}</div>
+              ))}
+            </div>
+
+            {/* Editable code area */}
             <textarea
+              ref={textareaRef}
               id="code-editor-textarea"
               value={code}
               onChange={e => setCode(e.target.value)}
-              rows={18}
+              onKeyDown={handleKeyDown}
+              rows={Math.max(16, lines.length)}
               spellCheck={false}
-              className="w-full h-full bg-transparent text-slate-100 focus:outline-none leading-relaxed font-mono resize-none selection:bg-emerald-500/30"
+              className="w-full h-full bg-transparent text-slate-100 focus:outline-none leading-relaxed font-mono resize-none selection:bg-emerald-500/30 whitespace-pre"
+              placeholder="Write or edit code here..."
             />
           </div>
         </div>
@@ -377,23 +693,49 @@ export function InteractivePlayground() {
           <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800 text-xs font-mono text-slate-400">
             <div className="flex items-center gap-2">
               <Terminal className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="font-medium text-slate-200">Terminal & Test Output</span>
+              <span className="font-medium text-slate-200">Terminal & Execution Output</span>
             </div>
-            {hasPassed && (
-              <span className="flex items-center gap-1 text-emerald-400 font-bold">
-                <CheckCircle className="w-3.5 h-3.5" />
-                <span>Passed</span>
-              </span>
-            )}
+            
+            <div className="flex items-center gap-2">
+              {hasPassed ? (
+                <span className="flex items-center gap-1 text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[11px]">
+                  <CheckCircle className="w-3 h-3" />
+                  <span>Goal Met</span>
+                </span>
+              ) : executionStats?.exitCode === 0 ? (
+                <span className="flex items-center gap-1 text-indigo-400 font-medium px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-[11px]">
+                  <Info className="w-3 h-3" />
+                  <span>Custom Executed</span>
+                </span>
+              ) : null}
+
+              <button
+                id="clear-console-btn"
+                onClick={handleClearOutput}
+                title="Clear console output"
+                className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
-          <div className="flex-1 p-4 bg-slate-950 font-mono text-xs text-slate-300 overflow-auto whitespace-pre leading-relaxed min-h-[300px]">
+          <div className="flex-1 p-4 bg-slate-950 font-mono text-xs text-slate-300 overflow-auto whitespace-pre-wrap leading-relaxed min-h-[300px] max-h-[460px]">
             {output}
           </div>
 
-          <div className="p-3 bg-slate-900/80 border-t border-slate-800 text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Runtime: V8 / Sandbox</span>
-            <span>Security: Read-only Isolated Worker</span>
+          <div className="p-3 bg-slate-900/80 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span>Runtime: {selectedLang.name}</span>
+              {executionStats?.timeMs !== undefined && (
+                <span className="text-emerald-400 font-mono">({executionStats.timeMs}ms)</span>
+              )}
+            </div>
+            {executionStats?.exitCode !== undefined && (
+              <span className={`font-mono ${executionStats.exitCode === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                Exit Code: {executionStats.exitCode}
+              </span>
+            )}
           </div>
         </div>
       </div>
