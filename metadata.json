@@ -1,0 +1,6 @@
+{
+  "name": "EduCode Academy",
+  "description": "Full-stack programming education platform with courses from Basic to Advanced, interactive code practice, quizzes, and real-world projects.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
