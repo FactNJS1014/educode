@@ -1,11 +1,11 @@
 import { neon, neonConfig } from '@neondatabase/serverless';
 import { SEED_USERS, SEED_ACHIEVEMENTS, SEED_COURSES_DATA } from './seed-data';
 
-// Configure neon for serverless connection reuse
-neonConfig.fetchConnectionCache = true;
+// In serverless environments (Netlify/Vercel), disable fetch connection cache to prevent stale socket "Connection closed" errors
+neonConfig.fetchConnectionCache = false;
 
 const DEFAULT_NEON_DATABASE_URL =
-  'postgresql://neondb_owner:npg_R3TNSAVYca5p@ep-divine-truth-azitnmln-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+  'postgresql://neondb_owner:npg_R3TNSAVYca5p@ep-divine-truth-azitnmln-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
 
 export function getNeonUrl(): string | null {
   const url =
@@ -16,7 +16,8 @@ export function getNeonUrl(): string | null {
   if (!url || url.includes('ep-sample-pooler')) {
     return null;
   }
-  return url;
+  // Strip channel_binding if present since HTTP serverless driver does not require it
+  return url.replace(/[?&]channel_binding=[^&]+/g, '').replace(/\?&/, '?').replace(/\?$/, '');
 }
 
 export function isNeonConfigured(): boolean {
@@ -383,9 +384,14 @@ function triggerBackgroundSeed(sql: any) {
 export async function getReadyNeonSql() {
   const url = getNeonUrl();
   if (!url) return null;
-  const isReady = await ensureNeonSchema();
-  if (!isReady) return null;
-  return neon(url);
+  try {
+    const isReady = await ensureNeonSchema();
+    if (!isReady) return null;
+    return neon(url);
+  } catch (err) {
+    console.warn('Neon SQL connection exception, falling back:', err);
+    return null;
+  }
 }
 
 export interface NeonHealthStatus {

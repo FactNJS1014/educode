@@ -33,99 +33,135 @@ export class FavoriteService {
 
 export class StatisticsService {
   static async getUserStats(userId: string): Promise<UserStats> {
-    const user = await db.getUserById(userId);
-    const progresses = await db.getUserProgressList(userId);
-    const completedLessons = progresses.filter(p => p.completed).length;
+    try {
+      const user = await db.getUserById(userId);
+      const progresses = (await db.getUserProgressList(userId)) || [];
+      const completedLessons = progresses.filter(p => p.completed).length;
 
-    const quizAttempts = await db.getUserQuizAttempts(userId);
-    const totalQuizzesPassed = quizAttempts.filter(q => q.passed).length;
+      const quizAttempts = (await db.getUserQuizAttempts(userId)) || [];
+      const totalQuizzesPassed = quizAttempts.filter(q => q.passed).length;
 
-    const allCourses = await db.getCourses({ publishedOnly: true });
-    let totalCoursesStarted = 0;
-    let totalCoursesCompleted = 0;
+      const allCourses = (await db.getCourses({ publishedOnly: true })) || [];
+      let totalCoursesStarted = 0;
+      let totalCoursesCompleted = 0;
 
-    for (const c of allCourses) {
-      const chapters = await db.getChaptersByCourseId(c.id);
-      let totalLessonsInCourse = 0;
-      let completedInCourse = 0;
+      // Group completed lessons by course efficiently in memory
+      const completedLessonIds = new Set(progresses.filter(p => p.completed).map(p => p.lessonId));
 
-      for (const ch of chapters) {
-        const lessons = ch.lessons || [];
-        totalLessonsInCourse += lessons.length;
-        for (const les of lessons) {
-          if (progresses.some(p => p.lessonId === les.id && p.completed)) {
-            completedInCourse++;
+      for (const c of allCourses) {
+        const chapters = c.chapters || (await db.getChaptersByCourseId(c.id)) || [];
+        let totalLessonsInCourse = 0;
+        let completedInCourse = 0;
+
+        for (const ch of chapters) {
+          const lessons = ch.lessons || [];
+          totalLessonsInCourse += lessons.length;
+          for (const les of lessons) {
+            if (completedLessonIds.has(les.id)) {
+              completedInCourse++;
+            }
+          }
+        }
+
+        if (completedInCourse > 0) {
+          totalCoursesStarted++;
+          if (totalLessonsInCourse > 0 && completedInCourse >= totalLessonsInCourse) {
+            totalCoursesCompleted++;
           }
         }
       }
 
-      if (completedInCourse > 0) {
-        totalCoursesStarted++;
-        if (totalLessonsInCourse > 0 && completedInCourse >= totalLessonsInCourse) {
-          totalCoursesCompleted++;
+      const projects = (await db.getAllProjects()) || [];
+      let totalProjectsCompleted = 0;
+      for (const pr of projects) {
+        const up = await db.getUserProject(userId, pr.id);
+        if (up && up.status === 'COMPLETED') {
+          totalProjectsCompleted++;
         }
       }
+
+      // Approx 20 mins per completed lesson
+      const estimatedHoursLearned = Math.round((completedLessons * 20) / 60);
+
+      return {
+        totalCoursesStarted,
+        totalCoursesCompleted,
+        totalLessonsCompleted: completedLessons,
+        totalQuizzesPassed,
+        totalProjectsCompleted,
+        learningStreakDays: user?.streakCount || 1,
+        estimatedHoursLearned,
+        dailyGoalProgressMinutes: Math.min(user?.dailyGoalMinutes || 30, completedLessons * 15),
+        dailyGoalTargetMinutes: user?.dailyGoalMinutes || 30,
+      };
+    } catch (error) {
+      console.warn('Error computing user stats, returning safe defaults:', error);
+      return {
+        totalCoursesStarted: 0,
+        totalCoursesCompleted: 0,
+        totalLessonsCompleted: 0,
+        totalQuizzesPassed: 0,
+        totalProjectsCompleted: 0,
+        learningStreakDays: 1,
+        estimatedHoursLearned: 0,
+        dailyGoalProgressMinutes: 0,
+        dailyGoalTargetMinutes: 30,
+      };
     }
-
-    const projects = await db.getAllProjects();
-    let totalProjectsCompleted = 0;
-    for (const pr of projects) {
-      const up = await db.getUserProject(userId, pr.id);
-      if (up && up.status === 'COMPLETED') {
-        totalProjectsCompleted++;
-      }
-    }
-
-    // Approx 20 mins per completed lesson
-    const estimatedHoursLearned = Math.round((completedLessons * 20) / 60);
-
-    return {
-      totalCoursesStarted,
-      totalCoursesCompleted,
-      totalLessonsCompleted: completedLessons,
-      totalQuizzesPassed,
-      totalProjectsCompleted,
-      learningStreakDays: user?.streakCount || 1,
-      estimatedHoursLearned,
-      dailyGoalProgressMinutes: Math.min(user?.dailyGoalMinutes || 30, completedLessons * 15),
-      dailyGoalTargetMinutes: user?.dailyGoalMinutes || 30,
-    };
   }
 }
 
 export class AdminService {
   static async getOverviewStats() {
-    const users = await db.getUsers();
-    const courses = await db.getCourses({ publishedOnly: false });
-    const lessons = await db.getAllLessons();
-    const quizzes = await db.getAllQuizzes();
-    const projects = await db.getAllProjects();
-    const activities = await db.getActivities(20);
+    try {
+      const users = (await db.getUsers()) || [];
+      const courses = (await db.getCourses({ publishedOnly: false })) || [];
+      const lessons = (await db.getAllLessons()) || [];
+      const quizzes = (await db.getAllQuizzes()) || [];
+      const projects = (await db.getAllProjects()) || [];
+      const activities = (await db.getActivities(20)) || [];
 
-    return {
-      totalUsers: users.length,
-      activeUsers: users.filter(u => u.isActive).length,
-      totalCourses: courses.length,
-      totalLessons: lessons.length,
-      totalQuizzes: quizzes.length,
-      totalProjects: projects.length,
-      recentActivities: activities,
-    };
+      return {
+        totalUsers: users.length,
+        activeUsers: users.filter(u => u.isActive).length,
+        totalCourses: courses.length,
+        totalLessons: lessons.length,
+        totalQuizzes: quizzes.length,
+        totalProjects: projects.length,
+        recentActivities: activities,
+      };
+    } catch (err) {
+      console.warn('Error in AdminService.getOverviewStats:', err);
+      return {
+        totalUsers: 0,
+        activeUsers: 0,
+        totalCourses: 0,
+        totalLessons: 0,
+        totalQuizzes: 0,
+        totalProjects: 0,
+        recentActivities: [],
+      };
+    }
   }
 
   static async getUsers() {
-    const users = await db.getUsers();
-    return users.map(u => ({
-      id: u.id,
-      name: u.name,
-      username: u.username,
-      email: u.email,
-      role: u.role,
-      isActive: u.isActive,
-      streakCount: u.streakCount,
-      createdAt: u.createdAt,
-      lastLoginAt: u.lastLoginAt,
-    }));
+    try {
+      const users = (await db.getUsers()) || [];
+      return users.map(u => ({
+        id: u.id,
+        name: u.name,
+        username: u.username,
+        email: u.email,
+        role: u.role,
+        isActive: u.isActive,
+        streakCount: u.streakCount,
+        createdAt: u.createdAt,
+        lastLoginAt: u.lastLoginAt,
+      }));
+    } catch (err) {
+      console.warn('Error in AdminService.getUsers:', err);
+      return [];
+    }
   }
 
   static async toggleUserStatus(userId: string) {
